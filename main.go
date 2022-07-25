@@ -3,6 +3,7 @@ package main
 import (
 	"os"
 
+	"github.com/bahodurnazarov/restaurant-management/database"
 	"github.com/bahodurnazarov/restaurant-management/middleware"
 	"github.com/bahodurnazarov/restaurant-management/routes"
 	"github.com/gin-gonic/gin"
