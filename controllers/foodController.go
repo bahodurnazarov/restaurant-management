@@ -6,7 +6,6 @@ import (
 	"log"
 	"math"
 	"net/http"
-	"runtime/trace"
 	"strconv"
 	"time"
 
@@ -38,29 +37,24 @@ func GetFoods() gin.HandlerFunc {
 			page = 1
 		}
 
-		startIndex := (page-1) * recordPerPage
+		startIndex := (page - 1) * recordPerPage
 		startIndex, err = strconv.Atoi(c.Query("startIndex"))
 
-		matchStage := bson.D{
-			{
-				"$match", bson.D{{}}}}
-		groupStage	:= bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum, 1"}}},{"data", bson.D{{"$push", "$$ROOT"}}}}}}
+		matchStage := bson.D{{"$match", bson.D{{}}}}
+		groupStage := bson.D{{"$group", bson.D{{"_id", bson.D{{"_id", "null"}}}, {"total_count", bson.D{{"$sum", 1}}}, {"data", bson.D{{"$push", "$$ROOT"}}}}}}
 		projectStage := bson.D{
 			{
 				"$project", bson.D{
 					{"_id", 0},
 					{"total_count", 1},
 					{"food_items", bson.D{{"$slice", []interface{}{"$data", startIndex, recordPerPage}}}},
-				}
-			}
-		}
+				}}}
 
-		result, err := foodCollection.Aggregate(ctx, mongc.Pipeline{
-			matchStage, groupStage, projectStage
-		})
+		result, err := foodCollection.Aggregate(ctx, mongo.Pipeline{
+			matchStage, groupStage, projectStage})
 		defer cancel()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error":"error occured while listing food items"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing food items"})
 		}
 		var allFoods []bson.M
 		if err = result.All(ctx, &allFoods); err != nil {
@@ -72,12 +66,12 @@ func GetFoods() gin.HandlerFunc {
 
 func GetFood() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancle = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		foodId := c.Param("food_id")
 		var food models.Food
 
 		err := foodCollection.FindOne(ctx, bson.M{"food_id": foodId}).Decode(&food)
-		defer cancle()
+		defer cancel()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while fetching the food item"})
 		}
@@ -95,9 +89,10 @@ func CreateFood() gin.HandlerFunc {
 			c.JSON(http.StatusBadRequest, gin.H{"error": err.Error()})
 			return
 		}
-		validationError := validate.Struct(food)
-		if validationError != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": validationError.Error()})
+
+		validationErr := validate.Struct(food)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 			return
 		}
 		err := menuCollection.FindOne(ctx, bson.M{"menu_id": food.Menu_id}).Decode(&menu)
@@ -130,7 +125,7 @@ func round(num float64) int {
 }
 
 func toFixed(num float64, precision int) float64 {
-	output := mat.Pow(10, float64(precision))
+	output := math.Pow(10, float64(precision))
 	return float64(round(num*output)) / output
 }
 
@@ -162,11 +157,11 @@ func UpdateFood() gin.HandlerFunc {
 		}
 
 		if food.Menu_id != nil {
-			err := menuCollection.FindOne(ctx, bson.M{"menu_id":food.Menu_id}).Decode(&menu)
+			err := menuCollection.FindOne(ctx, bson.M{"menu_id": food.Menu_id}).Decode(&menu)
 			defer cancel()
 			if err != nil {
-				msg := fmt.Sprintf("message: Menu was not found")
-				c.JSON(http.StatusInternalServerError, gin.H{"error":msg})
+				msg := fmt.Sprintf("message:Menu was not found")
+				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 				return
 			}
 			updateObj = append(updateObj, bson.E{"menu", food.Price})
@@ -179,21 +174,21 @@ func UpdateFood() gin.HandlerFunc {
 		filter := bson.M{"food_id": foodId}
 
 		opt := options.UpdateOptions{
-			Upsert: &upsert,	
+			Upsert: &upsert,
 		}
 
 		result, err := foodCollection.UpdateOne(
 			ctx,
 			filter,
 			bson.D{
-				{"$set", updateObj}
+				{"$set", updateObj},
 			},
 			&opt,
 		)
 
 		if err != nil {
-			msg := fmt.Sprintf("food item update failed")
-			c.JSON(http.StatusInternalServerError, gin.H{"error":msg})
+			msg := fmt.Sprint("foot item update failed")
+			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
 		c.JSON(http.StatusOK, result)

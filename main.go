@@ -4,8 +4,8 @@ import (
 	"os"
 
 	"github.com/bahodurnazarov/restaurant-management/database"
-	"github.com/bahodurnazarov/restaurant-management/middleware"
-	"github.com/bahodurnazarov/restaurant-management/routes"
+	middleware "github.com/bahodurnazarov/restaurant-management/middleware"
+	routes "github.com/bahodurnazarov/restaurant-management/routes"
 	"github.com/gin-gonic/gin"
 	"go.mongodb.org/mongo-driver/mongo"
 )

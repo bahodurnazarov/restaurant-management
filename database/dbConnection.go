@@ -14,8 +14,6 @@ func DBinstance() *mongo.Client {
 	MongoDb := "mongodb://localhost:27017"
 	fmt.Print(MongoDb)
 
-	mongo.NewClient(options.Client().ApplyURI(MongoDb))
-
 	client, err := mongo.NewClient(options.Client().ApplyURI(MongoDb))
 	if err != nil {
 		log.Fatal(err)
@@ -29,7 +27,7 @@ func DBinstance() *mongo.Client {
 	if err != nil {
 		log.Fatal(err)
 	}
-	fmt.Println("connexted to mongodb")
+	fmt.Println("connected to mongodb")
 	return client
 }
 

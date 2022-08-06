@@ -15,7 +15,6 @@ import (
 	"go.mongodb.org/mongo-driver/mongo"
 	"go.mongodb.org/mongo-driver/mongo/options"
 )
-
 type InvoiceViewFormat struct {
 	Invoice_id       string
 	Payment_method   string
@@ -36,7 +35,7 @@ func GetInvoices() gin.HandlerFunc {
 		result, err := invoiceCollection.Find(context.TODO(), bson.M{})
 		defer cancel()
 		if err != nil {
-			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing the menu items"})
+			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing invoice items"})
 		}
 
 		var allInvoices []bson.M
@@ -56,7 +55,6 @@ func GetInvoice() gin.HandlerFunc {
 
 		err := invoiceCollection.FindOne(ctx, bson.M{"invoice_id": invoiceId}).Decode(&invoice)
 		defer cancel()
-
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while listing invoice item"})
 		}
@@ -96,9 +94,8 @@ func CreateInvoice() gin.HandlerFunc {
 
 		err := orderCollection.FindOne(ctx, bson.M{"order_id": invoice.Order_id}).Decode(&order)
 		defer cancel()
-
 		if err != nil {
-			msg := fmt.Sprint("message: Order was not found")
+			msg := fmt.Sprintf("message: Order was not found")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -121,7 +118,7 @@ func CreateInvoice() gin.HandlerFunc {
 
 		result, insertErr := invoiceCollection.InsertOne(ctx, invoice)
 		if insertErr != nil {
-			msg := fmt.Sprintf("invoice item was not cerated")
+			msg := fmt.Sprintf("invoice item was not created")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -144,7 +141,9 @@ func UpdateInvoice() gin.HandlerFunc {
 		}
 
 		filter := bson.M{"invoice_id": invoiceId}
+
 		var updateObj primitive.D
+
 		if invoice.Payment_method != nil {
 			updateObj = append(updateObj, bson.E{"payment_method", invoice.Payment_method})
 		}
@@ -154,7 +153,7 @@ func UpdateInvoice() gin.HandlerFunc {
 		}
 
 		invoice.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-		updateObj = append(updateObj, bson.E{"update_at", invoice.Updated_at})
+		updateObj = append(updateObj, bson.E{"updated_at", invoice.Updated_at})
 
 		upsert := true
 		opt := options.UpdateOptions{
@@ -170,6 +169,7 @@ func UpdateInvoice() gin.HandlerFunc {
 			ctx,
 			filter,
 			bson.D{
+
 				{"$set", updateObj},
 			},
 			&opt,
@@ -179,6 +179,7 @@ func UpdateInvoice() gin.HandlerFunc {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
+
 		defer cancel()
 		c.JSON(http.StatusOK, result)
 	}

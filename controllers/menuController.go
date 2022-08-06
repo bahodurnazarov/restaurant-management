@@ -36,12 +36,12 @@ func GetMenus() gin.HandlerFunc {
 
 func GetMenu() gin.HandlerFunc {
 	return func(c *gin.Context) {
-		var ctx, cancle = context.WithTimeout(context.Background(), 100*time.Second)
+		var ctx, cancel = context.WithTimeout(context.Background(), 100*time.Second)
 		menuId := c.Param("menu_id")
 		var menu models.Menu
 
 		err := foodCollection.FindOne(ctx, bson.M{"menu_id": menuId}).Decode(&menu)
-		defer cancle()
+		defer cancel()
 		if err != nil {
 			c.JSON(http.StatusInternalServerError, gin.H{"error": "error occured while fetching the menu"})
 		}
@@ -59,9 +59,9 @@ func CreateMenu() gin.HandlerFunc {
 			return
 		}
 
-		validationError := validate.Struct(menu)
-		if validationError != nil {
-			c.JSON(http.StatusBadRequest, gin.H{"error": validationError.Error()})
+		validationErr := validate.Struct(menu)
+		if validationErr != nil {
+			c.JSON(http.StatusBadRequest, gin.H{"error": validationErr.Error()})
 			return
 		}
 
@@ -72,7 +72,7 @@ func CreateMenu() gin.HandlerFunc {
 
 		result, insertErr := menuCollection.InsertOne(ctx, menu)
 		if insertErr != nil {
-			msg := fmt.Sprintf("Menu was not created")
+			msg := fmt.Sprintf("Menu item was not created")
 			c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
 			return
 		}
@@ -97,7 +97,7 @@ func UpdateMenu() gin.HandlerFunc {
 		}
 
 		menuId := c.Param("menu_id")
-		fileter := bson.M{"manuu_id": menuId}
+		filter := bson.M{"manuu_id": menuId}
 
 		var updateObj primitive.D
 
@@ -108,6 +108,7 @@ func UpdateMenu() gin.HandlerFunc {
 				defer cancel()
 				return
 			}
+
 			updateObj = append(updateObj, bson.E{"start_date", menu.Start_Date})
 			updateObj = append(updateObj, bson.E{"end_date", menu.End_Date})
 
@@ -119,7 +120,7 @@ func UpdateMenu() gin.HandlerFunc {
 			}
 
 			menu.Updated_at, _ = time.Parse(time.RFC3339, time.Now().Format(time.RFC3339))
-			updateObj = append(updateObj, bson.E{"update_at", menu.Updated_at})
+			updateObj = append(updateObj, bson.E{"updated_at", menu.Updated_at})
 
 			upsert := true
 
@@ -128,13 +129,14 @@ func UpdateMenu() gin.HandlerFunc {
 			}
 
 			result, err := menuCollection.UpdateOne(
-				ctx, 
+				ctx,
 				filter,
 				bson.D{
-					{"$set", updateObj}
+					{"$set", updateObj},
 				},
-				&opt, 
+				&opt,
 			)
+
 			if err != nil {
 				msg := "Menu update failed"
 				c.JSON(http.StatusInternalServerError, gin.H{"error": msg})
